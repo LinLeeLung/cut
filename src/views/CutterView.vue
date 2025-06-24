@@ -37,7 +37,6 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore'
@@ -49,13 +48,30 @@ const selectedImages = ref([{ imageUrl: '' }])
 
 const db = getFirestore()
 const auth = getAuth()
+import { getStorage, ref as storageRef, getDownloadURL } from 'firebase/storage'
 
 const loadUploadedImages = async () => {
   const user = auth.currentUser
   if (!user) return
+
   const q = query(collection(db, 'uploads'), where('uploadedBy.uid', '==', user.uid))
   const snapshot = await getDocs(q)
-  uploadedImages.value = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+
+  const storage = getStorage()
+  const promises = snapshot.docs.map(async (doc) => {
+    const data = doc.data()
+    const fileRef = storageRef(storage, data.path) // 確保是 uploads/... 的完整路徑
+    const url = await getDownloadURL(fileRef)
+
+    return {
+      id: doc.id,
+      imageUrl: url,
+      imageName: data.name || '未命名圖片',
+    }
+  })
+
+  uploadedImages.value = await Promise.all(promises)
+  console.log('uploadImages:', uploadedImages.value)
 }
 
 const addImage = () => {

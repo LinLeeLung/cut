@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 
 const props = defineProps({
   imageUrl: String,
@@ -43,17 +43,30 @@ const stageConfig = ref({
   height: 400,
 })
 
-onMounted(() => {
-  if (props.imageUrl) {
-    const img = new window.Image()
-    img.src = props.imageUrl
-    img.onload = () => {
-      image.value = img
-      shape.value.width = img.width * 0.5
-      shape.value.height = img.height * 0.5
-    }
+const loadImage = (url) => {
+  if (!url) return
+  const img = new window.Image()
+  img.crossOrigin = 'anonymous' // 🔒 為避免跨域錯誤
+  img.src = url
+  img.onload = () => {
+    image.value = img
+    shape.value.width = img.width * 0.5
+    shape.value.height = img.height * 0.5
   }
+}
+
+// 初次載入
+onMounted(() => {
+  loadImage(props.imageUrl)
 })
+
+// ✅ 監聽 props.imageUrl 改變時重新載入
+watch(
+  () => props.imageUrl,
+  (newUrl) => {
+    loadImage(newUrl)
+  },
+)
 
 const updatePosition = (e) => {
   const node = e.target
