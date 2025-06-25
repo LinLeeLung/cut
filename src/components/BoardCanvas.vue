@@ -59,13 +59,12 @@ const loadImage = (url) => {
 onMounted(() => {
   loadImage(props.imageUrl)
 })
-
-// ✅ 監聽 props.imageUrl 改變時重新載入
 watch(
   () => props.imageUrl,
   (newUrl) => {
     loadImage(newUrl)
   },
+  { immediate: false },
 )
 
 const updatePosition = (e) => {
