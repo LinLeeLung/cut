@@ -11,7 +11,7 @@
             :disabled="selectedImages.length >= 4"
           >
             <option value="" disabled>請選擇圖片</option>
-            <option v-for="img in uploadedImages" :key="img.id" :value="img.imageUrl">
+            <option v-for="img in uploadedImages" :key="img.id" :value="img.url">
               {{ img.name }}
             </option>
           </select>
