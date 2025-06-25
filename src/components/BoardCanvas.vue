@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 
 const props = defineProps({
   imageUrl: String,
@@ -43,17 +43,33 @@ const stageConfig = ref({
   height: 400,
 })
 
-onMounted(() => {
-  if (props.imageUrl) {
-    const img = new window.Image()
-    img.src = props.imageUrl
-    img.onload = () => {
-      image.value = img
-      shape.value.width = img.width * 0.5
-      shape.value.height = img.height * 0.5
-    }
+const loadImage = (url) => {
+  if (!url) return
+  const img = new Image()
+  img.onload = () => {
+    image.value = img
+    shape.value.width = img.width * 0.5
+    shape.value.height = img.height * 0.5
+    // 重置位置（視需要可取消）
+    shape.value.x = 50
+    shape.value.y = 50
   }
+  img.src = url
+}
+
+// ✅ 初始載入
+onMounted(() => {
+  loadImage(props.imageUrl)
 })
+
+// ✅ 監聽 props.imageUrl 的變更
+watch(
+  () => props.imageUrl,
+  (newUrl) => {
+    loadImage(newUrl)
+  },
+  { immediate: false }
+)
 
 const updatePosition = (e) => {
   const node = e.target
@@ -66,6 +82,7 @@ const updateTransform = (e) => {
   shape.value.rotation = node.rotation()
 }
 </script>
+
 
 <style scoped>
 .relative {

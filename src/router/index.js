@@ -3,7 +3,7 @@ import Home from '@/views/Home.vue'
 import Login from '@/views/Login.vue'
 import AboutView from '@/views/AboutView.vue'
 import CutterView from '@/views/CutterView.vue'
-import UploadManager from '@/components/UploadManager.vue'
+import UploadManager from '@/views/UploadManager.vue'
 const routes = [
   { path: '/', name: 'Home', component: Home },
   { path: '/login', name: 'Login', component: Login },
