@@ -1,20 +1,13 @@
 <script setup>
-import { RouterView, RouterLink } from 'vue-router'
 import Header from './components/Header.vue'
 </script>
 
 <template>
-  <header class="p-4 bg-gray-100">
-    <nav class="space-x-4">
-      <!-- <Header></Header> -->
-      <RouterLink to="/">🏠 首頁</RouterLink>
-      <RouterLink to="/about">📄 關於</RouterLink>
-      <RouterLink to="/cut">📄 裁切對紋</RouterLink>
-      <RouterLink to="/uploadM">📄 檔案管理</RouterLink>
-      <RouterLink to="/login">📄 登入/登出</RouterLink>
-    </nav>
-  </header>
+  <!-- 導覽列在上 -->
+  <Header />
 
-  <RouterView />
-  <!-- ✅ 這裡顯示對應的頁面內容 -->
+  <!-- 主要展示內容，位於導覽列正下方 -->
+  <main class="w-full px-4 sm:px-6 md:px-8">
+    <RouterView />
+  </main>
 </template>

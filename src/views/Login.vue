@@ -43,7 +43,18 @@ async function checkProStatus(uid) {
     console.log('isPro=', isPro.value)
   }
 }
+import { signOut } from 'firebase/auth'
 
+function logout() {
+  signOut(auth)
+    .then(() => {
+      user.value = null
+      isPro.value = false
+    })
+    .catch((err) => {
+      errorMsg.value = '登出失敗：' + err.message
+    })
+}
 async function subscribe() {
   if (!user.value) return
   const uid = user.value.uid
@@ -87,6 +98,11 @@ async function subscribe() {
       </div>
 
       <div v-else class="text-purple-700">🌟 您是進階會員！已解鎖儲存與分享功能。</div>
+    </div>
+    <div v-if="user">
+      <button @click="logout" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        登出
+      </button>
     </div>
 
     <div v-if="errorMsg" class="text-red-600">{{ errorMsg }}</div>
