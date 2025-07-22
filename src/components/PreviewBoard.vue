@@ -5,13 +5,13 @@
       <div
         v-for="(screenshot, index) in screenshotList"
         :key="screenshot.id"
-        class="relative shadow p-1 border"
+        class="relative p-1"
         style="width: fit-content"
       >
         <div class="relative" :style="getImageStyle(screenshot.id)">
           <img
             :src="screenshot.url"
-            class="cursor-move"
+            class="cursor-move transition-transform duration-200 hover:scale-100"
             @mousedown="startImageDrag($event, screenshot.id)"
             @dblclick="rotateScreenshot(screenshot.id)"
           />
@@ -20,7 +20,7 @@
             class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white text-xs px-1 rounded text-center"
             style="pointer-events: none"
           >
-            <div>{{ getLabel(screenshot.globalIndex) }}</div>
+            <div>{{ screenshot.label }}</div>
             <div>
               {{ (screenshot.rawWidth / props.cmToPx).toFixed(0) }}x
               {{ (screenshot.rawHeight / props.cmToPx).toFixed(0) }} cm

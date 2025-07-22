@@ -66,7 +66,7 @@
             whiteSpace: 'nowrap',
           }"
         >
-          <div>{{ getLabel(index) }}</div>
+          <div>{{ rect.label }}</div>
           <div>
             {{ (rect.width / cmToPx).toFixed(0) }}x{{ (rect.height / cmToPx).toFixed(0) }} cm
           </div>
@@ -100,6 +100,7 @@ const getLabel = (index) => {
 }
 
 const props = defineProps({
+  boardIndex: Number, // 新增這個：板材編號 1、2、3...
   modelValue: Object,
   cmToPx: Number,
   imageList: Array,
@@ -141,7 +142,8 @@ const handleImageClick = (e) => {
   const height = props.rectWidth * props.cmToPx
   const id = nanoid()
   console.log(width, height)
-  const newRect = { id, x, y, width, height }
+  const label = props.boardIndex + getLabel(rects.value.length) // e.g., "2A"
+  const newRect = { id, x, y, width, height, label }
   rects.value.push(newRect)
 
   nextTick(() => captureRegion(newRect))
@@ -181,6 +183,7 @@ const captureRegion = (r) => {
 
   emit('screenshot', {
     id: props.modelValue.id + '__' + r.id,
+    label: r.label, // 新增 label 傳回給父層
     url: offscreen.toDataURL(),
     x: r.x * scaleFactor.value,
     y: r.y * scaleFactor.value,

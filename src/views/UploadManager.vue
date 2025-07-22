@@ -76,7 +76,8 @@ async function onFileChange(e) {
   messageClass.value = 'text-blue-500'
 
   try {
-    const path = `uploads/${Date.now()}_${file.name}`
+    const path = `uploads/${user.value.uid}/${Date.now()}_${file.name}`
+
     const fileRef = storageRef(storage, path)
     await uploadBytes(fileRef, file)
     const url = await getDownloadURL(fileRef)

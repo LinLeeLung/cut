@@ -59,6 +59,7 @@
         <!-- 板材主元件 -->
         <BigBoard
           v-model="boards[index]"
+          :boardIndex="index + 1"
           :cm-to-px="cmToPx"
           :image-list="imageList"
           :scale="globalScalePercent / 100"

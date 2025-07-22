@@ -4,7 +4,7 @@ import { auth, provider, db } from '@/firebase/firebase'
 import { signInWithPopup, onAuthStateChanged } from 'firebase/auth'
 import { syncUser } from '@/firebase/syncUser'
 import { doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore'
-
+import { setDoc } from 'firebase/firestore'
 const user = ref(null)
 const errorMsg = ref('')
 const isPro = ref(false)
@@ -19,6 +19,10 @@ onMounted(() => {
       user.value = null
       isPro.value = false
     }
+
+    await setDoc(doc(db, 'users', user.value.uid), {
+      isPro: false,
+    })
   })
 })
 
