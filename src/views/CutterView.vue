@@ -70,33 +70,19 @@
           @screenshot="handleScreenshot"
         />
       </div>
-
-      <!-- 集中截圖併接區
-      <div class="mt-6 border-t pt-4 min-h-[1000px]">
-        <h2 class="text-sm font-bold mb-2">所有截圖預覽：</h2>
-        <div class="flex flex-wrap gap-4">
-          <div v-for="(url, id) in screenshotMap" :key="id" class="shadow p-1 relative">
-            <img
-              :src="url"
-              class="max-w-[1200px] cursor-move absolute"
-              :style="getImageStyle(id)"
-              @mousedown="startImageDrag($event, id)"
-              @dblclick="rotateScreenshot(id)"
-            />
-          </div>
-        </div>
-      </div> -->
-      <PreviewBoard
-        :screenshotList="screenshotList"
-        :positionMap="positionMap"
-        :cmToPx="cmToPx"
-        :scale="globalScalePercent / 100"
-        @update:position="
-          (data) => {
-            positionMap[data.id] = { x: data.x, y: data.y, rotation: data.rotation }
-          }
-        "
-      />
+      <div>
+        <PreviewBoard
+          :screenshotList="screenshotList"
+          :positionMap="positionMap"
+          :cmToPx="cmToPx"
+          :scale="globalScalePercent / 100"
+          @update:position="
+            (data) => {
+              positionMap[data.id] = { x: data.x, y: data.y, rotation: data.rotation }
+            }
+          "
+        />
+      </div>
     </div>
   </div>
 </template>

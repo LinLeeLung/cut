@@ -1,6 +1,6 @@
 <template>
-  <div class="border rounded p-2">
-    <div class="mb-2 text-sm text-gray-700">板材 {{ modelValue.id }}</div>
+  <div class="rounded p-2">
+    <div class="mb-2 text-sm text-gray-700">板材 {{ boardIndex }}</div>
 
     <!-- 尺寸輸入 -->
     <div class="flex gap-2 mb-2">
@@ -24,7 +24,7 @@
 
     <!-- 畫布區 -->
     <div
-      class="relative border"
+      class="relative"
       ref="canvasWrapper"
       style="width: 100%; height: 100%"
       @mousemove="onDrag"
@@ -44,7 +44,7 @@
       />
 
       <div
-        v-for="(rect, index) in rects"
+        v-for="rect in rects"
         :key="rect.id"
         class="absolute border-2 border-blue-500 bg-transparent cursor-move"
         :style="{

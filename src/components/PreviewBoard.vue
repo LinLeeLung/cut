@@ -3,7 +3,7 @@
     <h2 class="text-sm font-bold mb-2">所有截圖預覽：</h2>
     <div class="flex flex-wrap gap-4">
       <div
-        v-for="(screenshot, index) in screenshotList"
+        v-for="screenshot in screenshotList"
         :key="screenshot.id"
         class="relative p-1"
         style="width: fit-content"

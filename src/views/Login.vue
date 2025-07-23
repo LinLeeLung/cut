@@ -19,10 +19,6 @@ onMounted(() => {
       user.value = null
       isPro.value = false
     }
-
-    await setDoc(doc(db, 'users', user.value.uid), {
-      isPro: false,
-    })
   })
 })
 
