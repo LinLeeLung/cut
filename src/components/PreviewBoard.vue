@@ -19,12 +19,15 @@
             @mousedown="startImageDrag($event, screenshot.id)"
             @dblclick="rotateScreenshot(screenshot.id)"
           />
-          <!-- 標示 A/B/C... 與尺寸 -->
+          <!-- 使用來自 BigBoard 傳來的 label -->
           <div
             class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white text-xs px-1 rounded"
           >
-            {{ getLabel(index) }}<br />
-            {{ screenshot.rawWidth }}x{{ screenshot.rawHeight }} cm
+            {{ screenshot.label }}<br />
+            {{ (screenshot.rawWidth / cmToPx).toFixed(0) }}x{{
+              (screenshot.rawHeight / cmToPx).toFixed(0)
+            }}
+            cm
           </div>
         </div>
       </div>
@@ -48,7 +51,12 @@ const draggingId = ref(null)
 const dragOffset = ref({ x: 0, y: 0 })
 
 const getLabel = (index) => {
-  return String.fromCharCode(65 + index) + 'A'
+  let label = ''
+  while (index >= 0) {
+    label = String.fromCharCode((index % 26) + 65) + label
+    index = Math.floor(index / 26) - 1
+  }
+  return label
 }
 
 const getImageStyle = (id) => {

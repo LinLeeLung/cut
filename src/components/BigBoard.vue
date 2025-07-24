@@ -255,7 +255,13 @@ const onDrag = (e) => {
 const stopDrag = () => {
   draggingId = null
 }
-
+watch(
+  () => props.circleRadius,
+  (newVal) => {
+    console.log('半徑變更為:', newVal)
+    console.info('半徑變更為:', newVal)
+  },
+)
 watch(
   () => [props.modelValue.length, props.modelValue.width, props.modelValue.url, scaleFactor.value],
   () => {

@@ -117,7 +117,7 @@ import { getFirestore, collection, query, where, onSnapshot, orderBy } from 'fir
 import BigBoard from '@/components/BigBoard.vue'
 import PreviewBoard from '@/components/PreviewBoard.vue'
 import { nanoid } from 'nanoid'
-const circleRadius = 50
+const circleRadius = ref(50)
 const auth = getAuth()
 const db = getFirestore()
 const cmToPx = ref(3.5)
