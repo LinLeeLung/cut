@@ -19,12 +19,33 @@
         <input type="number" v-model.number="rectWidth" class="border rounded px-2 py-1 w-24" />
       </div>
     </div>
+    <!-- 請加入在 <template> 的長寬輸入區下方 -->
+    <div class="flex items-end gap-4">
+      <!-- 切換形狀 -->
+      <div>
+        <label class="block text-sm">形狀</label>
+        <label class="text-sm mr-2">
+          <input type="radio" value="rect" v-model="drawShape" />
+          矩形
+        </label>
+        <label class="text-sm">
+          <input type="radio" value="circle" v-model="drawShape" />
+          圓形
+        </label>
+      </div>
+
+      <!-- 若為圓形才顯示 -->
+      <div v-if="drawShape === 'circle'">
+        <label class="block text-sm">圓半徑（cm）</label>
+        <input type="number" v-model.number="circleRadius" class="border rounded px-2 py-1 w-24" />
+      </div>
+    </div>
 
     <!-- 新增板材按鈕 -->
     <button
       v-if="boards.length < 4"
       @click="addBoard"
-      class="text-green-600 border px-2 py-1 rounded"
+      class="text-green-600 border px-2 py-1 rounded mt-4"
     >
       + 新增板材
     </button>
@@ -60,6 +81,7 @@
         <BigBoard
           v-model="boards[index]"
           :boardIndex="index + 1"
+          :circleRadius="circleRadius"
           :cm-to-px="cmToPx"
           :image-list="imageList"
           :scale="globalScalePercent / 100"
@@ -67,6 +89,7 @@
           :rect-width="rectWidth"
           :globalScalePercent="globalScalePercent / 100"
           :labelMap="labelMap"
+          :shape-type="drawShape"
           @screenshot="handleScreenshot"
         />
       </div>
@@ -90,37 +113,38 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
-import { getFirestore, collection, query, where, onSnapshot } from 'firebase/firestore'
+import { getFirestore, collection, query, where, onSnapshot, orderBy } from 'firebase/firestore'
 import BigBoard from '@/components/BigBoard.vue'
-import { nanoid } from 'nanoid'
 import PreviewBoard from '@/components/PreviewBoard.vue'
-const screenshotPosition = ref({}) // 儲存每張截圖的位置
+import { nanoid } from 'nanoid'
+const circleRadius = 50
+const auth = getAuth()
+const db = getFirestore()
+const cmToPx = ref(3.5)
+const globalScalePercent = ref(100)
+const rectLength = ref(180)
+const rectWidth = ref(60)
+const drawShape = ref('rect') // rect 或 circle
+const boards = ref([])
+const uploadedImages = ref([])
+const imageList = ref([])
 const screenshotList = ref([])
 const positionMap = ref({})
-const cmToPx = ref(3.5)
-const imageList = ref([]) // 如果你後面真的有使用
 
 const labelMap = computed(() => {
   const map = {}
   screenshotList.value.forEach((s, index) => {
-    map[s.id] = index // 或 s.globalIndex 看你是哪個維度
+    map[s.id] = index
   })
-
   return map
 })
+
 const handleScreenshot = (data) => {
   const index = screenshotList.value.findIndex((s) => s.id === data.id)
-
   if (data.url) {
     if (index === -1) {
-      // 第一次加入：給予 globalIndex
       const globalIndex = screenshotList.value.length
-
-      screenshotList.value.push({
-        ...data,
-        globalIndex,
-      })
-
+      screenshotList.value.push({ ...data, globalIndex })
       if (!positionMap.value[data.id]) {
         positionMap.value[data.id] = {
           x: data.x || 0,
@@ -128,9 +152,7 @@ const handleScreenshot = (data) => {
           rotation: data.rotation || 0,
         }
       }
-      console.log('globalIndex=', globalIndex)
     } else {
-      // 再次擷取：更新 url，但保持位置與編號
       const old = screenshotList.value[index]
       screenshotList.value[index] = {
         ...old,
@@ -140,83 +162,28 @@ const handleScreenshot = (data) => {
       }
     }
   } else {
-    // 移除
     if (index !== -1) screenshotList.value.splice(index, 1)
     delete positionMap.value[data.id]
   }
 }
 
-const getImageStyle = (id) => {
-  const pos = screenshotPosition.value[id] || { x: 0, y: 0 }
-  return {
-    transform: `translate(${pos.x}px, ${pos.y}px) rotate(${screenshotRotation.value[id] || 0}deg)`,
-    transition: 'transform 0.1s',
-  }
-}
-
-let dragId = null
-let dragOffset = { x: 0, y: 0 }
-
-const startImageDrag = (e, id) => {
-  dragId = id
-  const pos = screenshotPosition.value[id] || { x: 0, y: 0 }
-  dragOffset = {
-    x: e.clientX - pos.x,
-    y: e.clientY - pos.y,
-  }
-  window.addEventListener('mousemove', onImageDrag)
-  window.addEventListener('mouseup', stopImageDrag)
-}
-
-const onImageDrag = (e) => {
-  if (!dragId) return
-  screenshotPosition.value[dragId] = {
-    x: e.clientX - dragOffset.x,
-    y: e.clientY - dragOffset.y,
-  }
-}
-
-const stopImageDrag = () => {
-  dragId = null
-  window.removeEventListener('mousemove', onImageDrag)
-  window.removeEventListener('mouseup', stopImageDrag)
-}
-
-const auth = getAuth()
-const db = getFirestore()
-
-const rectLength = ref(180)
-const rectWidth = ref(60)
-const globalScalePercent = ref(70)
-const boards = ref([])
-const uploadedImages = ref([])
-
-const screenshotMap = ref({})
-const screenshotRotation = ref({})
-
-const rotateScreenshot = (id) => {
-  screenshotRotation.value[id] = ((screenshotRotation.value[id] || 0) + 90) % 360
-}
-
 const addBoard = () => {
-  const firstImageUrl = uploadedImages.value[0]?.url ?? ''
+  const lastImageUrl = uploadedImages.value.at(-1)?.url ?? ''
   boards.value.push({
     id: nanoid(),
     length: 320,
     width: 160,
-    url: firstImageUrl,
+    url: lastImageUrl,
     visible: true,
   })
 }
 
-const removeBoard = (id) => {
-  boards.value = boards.value.filter((b) => b.id !== id)
-  delete screenshotMap.value[id]
-  delete screenshotRotation.value[id]
-}
-
 const loadUploadedImages = (user) => {
-  const q = query(collection(db, 'uploads'), where('uploadedBy.uid', '==', user.uid))
+  const q = query(
+    collection(db, 'uploads'),
+    where('uploadedBy.uid', '==', user.uid),
+    orderBy('createdAt', 'asc'),
+  )
   onSnapshot(q, (snapshot) => {
     uploadedImages.value = snapshot.docs.map((doc) => ({
       id: doc.id,
