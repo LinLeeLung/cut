@@ -2,12 +2,17 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // 限定 uploads/{userId}/{filename}
+    // 允許 uploads/{userId}/... 結構
     match /uploads/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // 禁止其他資料夾的操作
+    // 允許 cuttingStates/{userId}/... 結構
+    match /cuttingStates/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 禁止其他所有資料夾
     match /{allPaths=**} {
       allow read, write: if false;
     }

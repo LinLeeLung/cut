@@ -3,9 +3,9 @@
     <h2 class="text-sm font-bold mb-2">所有截圖預覽：</h2>
     <div class="flex flex-wrap gap-4">
       <div
-        v-for="(screenshot, index) in screenshotList"
+        v-for="screenshot in screenshotList"
         :key="screenshot.id"
-        class="relative shadow p-1 border"
+        class="relative"
         style="width: fit-content"
       >
         <div class="relative" :style="getImageStyle(screenshot.id)">
@@ -21,13 +21,16 @@
           />
           <!-- 使用來自 BigBoard 傳來的 label -->
           <div
-            class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white text-xs px-1 rounded"
+            class="absolute left-1/2 top-1/2 text-white text-xs px-1 rounded bg-black bg-opacity-50 text-center"
+            :style="{
+              transform: `translate(-50%, -50%) rotate(${getRotation(screenshot.id)}deg)`,
+              maxWidth: '80%',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }"
           >
-            {{ screenshot.label }}<br />
-            {{ (screenshot.rawWidth / cmToPx).toFixed(0) }}x{{
-              (screenshot.rawHeight / cmToPx).toFixed(0)
-            }}
-            cm
+            {{ screenshot.label }}
           </div>
         </div>
       </div>

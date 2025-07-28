@@ -2,20 +2,20 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 使用者資訊（訂閱狀態等）
+    // 使用者資訊（例如訂閱等）
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // 上傳圖片資料
+    // 圖片上傳資料
     match /uploads/{docId} {
-      // 建立（寫入新圖片）
-      allow create: if request.auth != null
-                    && request.resource.data.uploadedBy.uid == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.uploadedBy.uid == request.auth.uid;
+      allow read, update, delete: if request.auth != null && resource.data.uploadedBy.uid == request.auth.uid;
+    }
 
-      // 讀取、更新、刪除（既有圖片）
-      allow read, update, delete: if request.auth != null
-                                  && resource.data.uploadedBy.uid == request.auth.uid;
+    // 💾 儲存使用者裁切狀態 cuttingStates
+    match /cuttingStates/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
