@@ -216,18 +216,12 @@ const uploadFullStateToFirebase = async () => {
   // 組成檔案名稱
   const now = new Date()
   const yyyymmdd = now.toISOString().slice(0, 10).replace(/-/g, '')
-  const defaultImageName = (() => {
-    const url = boards.value[0]?.url
-    if (!url) return '未命名'
-    const decoded = decodeURIComponent(url.split('/').pop() || '')
-    const noQuery = decoded.split('?')[0]
-    const segments = noQuery.split('/')
-    return segments[segments.length - 1].split('.')[0] || '未命名'
-  })()
+  // 正確取得圖片檔名（例如 1754019934120_MS-012-325x163）
 
+  console.log(boards.value[0])
   const filename = customFilename.value?.trim()
     ? customFilename.value.trim()
-    : `${yyyymmdd}-${defaultImageName}.json`
+    : `${yyyymmdd}-${defaultImageName.value}.json`
 
   // 準備 JSON 資料
   const fullData = {
@@ -259,6 +253,22 @@ const uploadFullStateToFirebase = async () => {
   })
 
   showMessage(`已儲存檔案：${filename}`)
+  watchMySavedStates()
+}
+const watchMySavedStates = () => {
+  if (!auth.currentUser) return
+
+  const q = query(
+    collection(db, 'cuttingStates', auth.currentUser.uid, 'files'),
+    orderBy('createdAt', 'desc'),
+  )
+
+  onSnapshot(q, (snapshot) => {
+    myFileList.value = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }))
+  })
 }
 
 defineExpose({})
@@ -289,14 +299,18 @@ const uploadedImages = ref<any[]>([])
 const imageList = ref<any[]>([])
 const screenshotList = ref<Screenshot[]>([])
 const positionMap = ref<Record<string, { x: number; y: number; rotation: number }>>({})
+const defaultImageName = ref('未命名')
+
 //#endregion
 watch(
   boards,
   (newBoards) => {
-    newBoards.forEach((board) => {
+    newBoards.forEach((board, index) => {
       const img = uploadedImages.value.find((i) => i.url === board.url)
       if (!img) return
-
+      if (index === 0) {
+        defaultImageName.value = img.name
+      }
       // 解析檔名中的長x寬，例如：板材_320x160.jpg
       const match = img.name.match(/(\d{2,4})[xX×](\d{2,4})/)
 

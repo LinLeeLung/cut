@@ -1,67 +1,69 @@
 <template>
   <div>
-    <input type="file" @change="onFileChange" />
-    <div class="mb-2">
-      <label class="block text-sm font-bold">或從已上傳圖片載入：</label>
-      <select
-        v-model="selectedImageUrl"
-        @change="loadFromFirebaseImage(selectedImageUrl)"
-        class="border rounded px-2 py-1 text-sm"
-      >
-        <option value="">請選擇圖片</option>
-        <option v-for="img in uploadedImages" :key="img.url" :value="img.url">
-          {{ img.name }}
-        </option>
-      </select>
-    </div>
+    <label
+      class="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600"
+      :class="{ 'opacity-50 cursor-not-allowed': !canUpload }"
+    >
+      📤 上傳圖片
+      <input type="file" class="hidden" @change="onFileChange" :disabled="!canUpload" />
+    </label>
+    <label class="block text-sm font-bold">或從已上傳圖片載入：</label>
+    <select
+      v-model="selectedImageUrl"
+      @change="loadFromFirebaseImage(selectedImageUrl)"
+      class="border rounded px-2 py-1 text-sm"
+    >
+      <option value="">請選擇圖片</option>
+      <option v-for="img in uploadedImages" :key="img.url" :value="img.url">
+        {{ img.name }}
+      </option>
+    </select>
+  </div>
 
-    <div class="relative">
-      <canvas
-        ref="canvas"
-        :width="canvasWidth"
-        :height="canvasHeight"
-        @mousedown="startDragging"
-        @mousemove="dragPoint"
-        @mouseup="stopDragging"
-        @mouseleave="stopDragging"
-        class="border mt-2"
-      ></canvas>
+  <div class="relative">
+    <canvas
+      ref="canvas"
+      :width="canvasWidth"
+      :height="canvasHeight"
+      @mousedown="startDragging"
+      @mousemove="dragPoint"
+      @mouseup="stopDragging"
+      @mouseleave="stopDragging"
+      class="border mt-2"
+    ></canvas>
 
-      <!-- ✅ 浮動放大區 -->
-      <canvas
-        ref="zoomCanvas"
-        width="150"
-        height="150"
-        class="absolute border pointer-events-none"
-        :style="{ top: zoomY + 'px', left: zoomX + 'px', display: isDragging ? 'block' : 'none' }"
-      />
-    </div>
-
-    <button class="mt-2 p-2 bg-blue-600 text-white rounded" @click="handleTransform">
-      進行校正
-    </button>
-    <label class="text-sm mr-2">輸入檔名（顏色cmXcm）：</label>
-    <input
-      type="text"
-      placeholder="請輸入顏色長X寛"
-      class="border rounded px-2 py-1 text-sm w-64 mr-2"
-      v-model="filename"
+    <!-- ✅ 浮動放大區 -->
+    <canvas
+      ref="zoomCanvas"
+      width="150"
+      height="150"
+      class="absolute border pointer-events-none"
+      :style="{ top: zoomY + 'px', left: zoomX + 'px', display: isDragging ? 'block' : 'none' }"
     />
-    <button class="bg-blue-600 text-white px-4 py-1 rounded" @click="uploadPreviewImage">
-      上傳校正後圖片
-    </button>
-    <!-- 在 template 中加入訊息區 -->
-    <p v-if="message" :class="messageClass" class="text-sm mt-2">
-      {{ message }}
-    </p>
-    <div v-if="previewUrl" class="mt-4">
-      <h3>校正後預覽圖：</h3>
-      <img :src="previewUrl" class="border max-w-full" />
-    </div>
+  </div>
+
+  <button class="mt-2 p-2 bg-blue-600 text-white rounded" @click="handleTransform">進行校正</button>
+  <label class="text-sm mr-2">輸入檔名（顏色cmXcm）：</label>
+  <input
+    type="text"
+    placeholder="請輸入顏色長X寛"
+    class="border rounded px-2 py-1 text-sm w-64 mr-2"
+    v-model="filename"
+  />
+  <button class="bg-blue-600 text-white px-4 py-1 rounded" @click="uploadPreviewImage">
+    上傳校正後圖片
+  </button>
+  <!-- 在 template 中加入訊息區 -->
+  <p v-if="message" :class="messageClass" class="text-sm mt-2">
+    {{ message }}
+  </p>
+  <div v-if="previewUrl" class="mt-4">
+    <h3>校正後預覽圖：</h3>
+    <img :src="previewUrl" class="border max-w-full" />
   </div>
 </template>
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { matrix, multiply, inv } from 'mathjs'
 import { auth, storage, db } from '@/firebase/firebase'
@@ -70,7 +72,10 @@ const zoomCanvas = ref<HTMLCanvasElement | null>(null)
 const zoomX = ref(0)
 const zoomY = ref(0)
 const isDragging = ref(false)
-
+const canUpload = computed(() => {
+  //  console.log('user.value=', isPro.value)
+  return user.value && isPro.value
+})
 import {
   collection,
   addDoc,
@@ -121,46 +126,6 @@ async function uploadPreviewImage() {
     })
 
     message.value = '✅ 圖片已成功上傳！'
-    messageClass.value = 'text-green-600'
-  } catch (err) {
-    console.error('❌ 上傳失敗', err)
-    message.value = '❌ 上傳失敗，請稍後再試'
-    messageClass.value = 'text-red-600'
-  }
-}
-
-async function uploadCorrectedCanvas() {
-  if (!canvas.value || !user.value) return
-
-  message.value = '⏳ 圖片上傳中...'
-  messageClass.value = 'text-blue-500'
-
-  try {
-    // 將 canvas 轉為 Blob
-    const blob: Blob = await new Promise((resolve) => {
-      canvas.value!.toBlob((b) => resolve(b!), 'image/png')
-    })
-
-    const path = `uploads/${user.value.uid}/${filename}`
-    const fileRef = storageRef(storage, path)
-
-    // 上傳
-    await uploadBytes(fileRef, blob)
-    const url = await getDownloadURL(fileRef)
-
-    // 建立 Firestore 記錄
-    await addDoc(collection(db, 'uploads'), {
-      name: filename.value,
-      path,
-      url,
-      uploadedBy: {
-        uid: user.value.uid,
-        email: user.value.email,
-      },
-      createdAt: serverTimestamp(),
-    })
-
-    message.value = '✅ 校正圖片已上傳成功！'
     messageClass.value = 'text-green-600'
   } catch (err) {
     console.error('❌ 上傳失敗', err)
@@ -436,8 +401,29 @@ onMounted(() => {
         uploadedImages.value = snapshot.docs.map((doc) => doc.data())
       })
     }
+    const qq = query(
+      collection(db, 'uploadsRawPic'),
+      where('uploadedBy.uid', '==', user.value.uid),
+      orderBy('createdAt', 'desc'),
+      limit(1),
+    )
+
+    const snapshot = await getDocs(qq)
+    if (!snapshot.empty) {
+      const latest = snapshot.docs[0].data()
+      selectedImageUrl.value = latest.url
+      loadFromFirebaseImage(selectedImageUrl.value)
+      // filename.value = latest.name
+      // imageName.value = latest.name // 如果你有這欄
+    }
   })
 })
+
+import { orderBy, limit, getDocs } from 'firebase/firestore'
+
+async function loadLatestRawImage() {
+  if (!user.value) return
+}
 </script>
 <!-- 在你的 index.html 加上 -->
 
