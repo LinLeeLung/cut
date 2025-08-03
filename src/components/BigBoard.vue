@@ -162,6 +162,23 @@ const localRects = computed({
 const drawImage = () => {
   const ctx = boardCanvas.value?.getContext('2d')
   if (!ctx || !props.modelValue.url) return
+
+  // ✅ 自動擷取長寬數字（格式 xxx_300x180 或 xxx-300x180）
+  const match = props.modelValue.url.match(/[_\-](\d{2,4})[x×](\d{2,4})/i)
+  if (match) {
+    const [, lenStr, widStr] = match
+    const length = parseInt(lenStr)
+    const width = parseInt(widStr)
+
+    if (length !== props.modelValue.length || width !== props.modelValue.width) {
+      emit('update:modelValue', {
+        ...props.modelValue,
+        length,
+        width,
+      })
+    }
+  }
+
   const img = new Image()
   img.crossOrigin = 'anonymous'
   img.onload = () => {

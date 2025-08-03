@@ -1,5 +1,7 @@
 <template>
   <!-- CutterView.vue -->
+  <div v-if="!userReady" class="text-sm text-gray-500">登入狀態確認中...</div>
+
   <div class="w-full mx-auto p-4 flex flex-col gap-4">
     <!-- 全域比例控制 -->
     <div class="mb-4">
@@ -114,6 +116,13 @@
           >
             載入所選檔案
           </button>
+          <button
+            class="mt-2 px-3 py-1 bg-red-600 text-white text-sm rounded"
+            @click="deleteSelectedFile"
+            :disabled="!selectedFilename"
+          >
+            刪除所選檔案
+          </button>
         </div>
       </div>
     </div>
@@ -170,8 +179,14 @@
   </div>
 </template>
 <script setup lang="ts">
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from 'firebase/storage'
+import { getDocs, doc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'
 
 const loadSavedState = async (filename) => {
   const user = auth.currentUser
@@ -201,7 +216,15 @@ const uploadFullStateToFirebase = async () => {
   // 組成檔案名稱
   const now = new Date()
   const yyyymmdd = now.toISOString().slice(0, 10).replace(/-/g, '')
-  const defaultImageName = boards.value[0]?.url?.split('/').pop()?.split('.')[0] || '未命名'
+  const defaultImageName = (() => {
+    const url = boards.value[0]?.url
+    if (!url) return '未命名'
+    const decoded = decodeURIComponent(url.split('/').pop() || '')
+    const noQuery = decoded.split('?')[0]
+    const segments = noQuery.split('/')
+    return segments[segments.length - 1].split('.')[0] || '未命名'
+  })()
+
   const filename = customFilename.value?.trim()
     ? customFilename.value.trim()
     : `${yyyymmdd}-${defaultImageName}.json`
@@ -235,11 +258,11 @@ const uploadFullStateToFirebase = async () => {
     public: false,
   })
 
-  alert(`已儲存檔案：${filename}`)
+  showMessage(`已儲存檔案：${filename}`)
 }
 
 defineExpose({})
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { getFirestore, collection, query, where, onSnapshot, orderBy } from 'firebase/firestore'
 import BigBoard from '@/components/BigBoard.vue'
@@ -267,6 +290,30 @@ const imageList = ref<any[]>([])
 const screenshotList = ref<Screenshot[]>([])
 const positionMap = ref<Record<string, { x: number; y: number; rotation: number }>>({})
 //#endregion
+watch(
+  boards,
+  (newBoards) => {
+    newBoards.forEach((board) => {
+      const img = uploadedImages.value.find((i) => i.url === board.url)
+      if (!img) return
+
+      // 解析檔名中的長x寬，例如：板材_320x160.jpg
+      const match = img.name.match(/(\d{2,4})[xX×](\d{2,4})/)
+
+      if (match) {
+        const [, lenStr, widStr] = match
+        const length = parseInt(lenStr)
+        const width = parseInt(widStr)
+
+        if (length && width) {
+          board.length = length
+          board.width = width
+        }
+      }
+    })
+  },
+  { deep: true },
+)
 
 //#region 型別定義
 type Rect = {
@@ -441,8 +488,62 @@ const loadSelectedState = async () => {
   screenshotList.value = data.screenshotList || []
   positionMap.value = data.positionMap || {}
   snapshots.value = data.snapshots || []
+  customFilename.value = selectedFilename.value
+  showMessage(`已成功載入：${selectedFilename.value}`)
+}
+// 刪除所選檔案
+async function deleteSelectedFile() {
+  const user = auth.currentUser
+  if (!selectedFilename.value || !user.uid) {
+    showMessage('請先選擇要刪除的檔案')
+    return
+  }
 
-  alert(`已成功載入：${selectedFilename.value}`)
+  const filename = selectedFilename.value
+  const stateId = user.uid
+
+  try {
+    // 1️⃣ 刪除 Storage 檔案
+    const filePath = `cuttingStates/${stateId}/${filename}`
+    const fileRef = storageRef(storage, filePath)
+    await deleteObject(fileRef)
+
+    // 2️⃣ 刪除 Firestore metadata
+    const filesCol = collection(db, 'cuttingStates', stateId, 'files')
+    const q = query(filesCol, where('filename', '==', filename))
+    const querySnapshot = await getDocs(q)
+    for (const docSnap of querySnapshot.docs) {
+      await deleteDoc(docSnap.ref)
+    }
+
+    // 3️⃣ 更新畫面清單
+    myFileList.value = myFileList.value.filter((f) => f.filename !== filename)
+    selectedFilename.value = ''
+    showMessage(`已成功刪除：${filename}`)
+  } catch (err) {
+    console.error('刪除失敗：', err)
+    showMessage(`刪除失敗：${err.message}`)
+  }
+}
+
+function showMessage(msg: string) {
+  const div = document.createElement('div')
+  div.textContent = msg
+  div.style.position = 'fixed'
+  div.style.top = '20px'
+  div.style.left = '50%'
+  div.style.transform = 'translateX(-50%)'
+  div.style.backgroundColor = '#4CAF50'
+  div.style.color = 'white'
+  div.style.padding = '10px 20px'
+  div.style.borderRadius = '8px'
+  div.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)'
+  div.style.zIndex = '9999'
+  document.body.appendChild(div)
+
+  setTimeout(() => {
+    div.remove()
+  }, 3000)
 }
 
 // 日期格式化函式
@@ -453,12 +554,19 @@ const formatTime = (seconds) => {
 }
 
 // 自動載入清單
+const userReady = ref(false)
+const currentUser = ref(null)
 
 onMounted(() => {
-  loadMyFileList()
   onAuthStateChanged(auth, (user) => {
-    if (user) loadUploadedImages(user)
+    currentUser.value = user
+    userReady.value = true
+    if (user) {
+      loadUploadedImages(user)
+      loadMyFileList()
+    }
   })
 })
+
 //#endregion
 </script>

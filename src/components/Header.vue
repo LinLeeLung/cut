@@ -5,6 +5,9 @@
       <RouterLink to="/about" class="hover:underline">📄 關於</RouterLink>
       <RouterLink to="/cut" class="hover:underline">📄 裁切對紋</RouterLink>
       <RouterLink to="/uploadM" class="hover:underline">📄 檔案管理</RouterLink>
+      <RouterLink to="/uploadbm" class="hover:underline">📄 手機上傳</RouterLink>
+      <RouterLink to="/rectifer" class="hover:underline">📄 圖形處理</RouterLink>
+
       <RouterLink to="/login" class="hover:underline">📄 登入/登出</RouterLink>
     </nav>
   </header>
