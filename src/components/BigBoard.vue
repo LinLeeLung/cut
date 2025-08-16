@@ -159,25 +159,11 @@ const localRects = computed({
   set: (val) => emit('update:rects', val),
 })
 
+const hasParsedFromFilename = ref(false)
+
 const drawImage = () => {
   const ctx = boardCanvas.value?.getContext('2d')
   if (!ctx || !props.modelValue.url) return
-
-  // ✅ 自動擷取長寬數字（格式 xxx_300x180 或 xxx-300x180）
-  const match = props.modelValue.url.match(/[_\-](\d{2,4})[x×](\d{2,4})/i)
-  if (match) {
-    const [, lenStr, widStr] = match
-    const length = parseInt(lenStr)
-    const width = parseInt(widStr)
-
-    if (length !== props.modelValue.length || width !== props.modelValue.width) {
-      emit('update:modelValue', {
-        ...props.modelValue,
-        length,
-        width,
-      })
-    }
-  }
 
   const img = new Image()
   img.crossOrigin = 'anonymous'
@@ -185,8 +171,18 @@ const drawImage = () => {
     ctx.clearRect(0, 0, canvasWidth.value, canvasHeight.value)
     ctx.drawImage(img, 0, 0, canvasWidth.value, canvasHeight.value)
   }
+  img.onerror = () => {
+    console.error('圖片載入失敗:', props.modelValue.url)
+  }
   img.src = props.modelValue.url
 }
+watch(
+  () => props.modelValue.url,
+  () => {
+    hasParsedFromFilename.value = false
+    drawImage()
+  },
+)
 
 onMounted(drawImage)
 watch(

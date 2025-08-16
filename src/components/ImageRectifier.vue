@@ -108,7 +108,7 @@ async function uploadPreviewImage() {
     const blob = await res.blob()
 
     // const filename = `preview_${Date.now()}.png`
-    const path = `uploads/${user.value.uid}/${filename}`
+    const path = `uploads/${user.value.uid}/${filename.value}`
     const fileRef = storageRef(storage, path)
 
     await uploadBytes(fileRef, blob)

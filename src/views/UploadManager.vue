@@ -8,7 +8,7 @@
         class="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600"
         :class="{ 'opacity-50 cursor-not-allowed': !canUpload }"
       >
-        📤 上傳圖片
+        📤 點我上傳圖片
         <input type="file" class="hidden" @change="onFileChange" :disabled="!canUpload" />
       </label>
       <!-- 在 template 中加入訊息區 -->
@@ -24,13 +24,20 @@
       <div v-if="uploads.length === 0" class="text-gray-500">尚無上傳圖片</div>
       <ul class="space-y-2">
         <li
-          v-for="item in uploads"
+          v-for="item in sortedUploads"
           :key="item.id"
           class="flex items-center justify-between border p-2 rounded"
         >
           <div class="flex items-center space-x-2">
-            <img :src="item.url" alt="預覽" class="w-12 h-12 object-cover rounded" />
+            <a :href="item.url" target="_blank" rel="noopener noreferrer">
+              <img
+                :src="item.url + '?t=' + item.createdAt?.seconds"
+                alt="預覽"
+                class="w-20 h-20 object-cover rounded cursor-pointer"
+              />
+            </a>
             <span class="text-sm">{{ item.name }}</span>
+            <span class="text-sm">({{ item.createdAt.toDate().toLocaleDateString() }})</span>
           </div>
           <button @click="deleteUpload(item)" class="text-sm text-red-600 hover:underline">
             刪除
@@ -63,7 +70,9 @@ const user = ref(null)
 const isPro = ref(false)
 const message = ref('')
 const messageClass = ref('')
-
+const sortedUploads = computed(() =>
+  [...uploads.value].sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate()),
+)
 const canUpload = computed(() => {
   //  console.log('user.value=', isPro.value)
   return user.value && isPro.value
@@ -119,6 +128,7 @@ function watchUploads() {
   onSnapshot(q, (snapshot) => {
     uploads.value = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
     loading.value = false
+    console.log('uploads.value...=', uploads.value)
   })
 }
 
