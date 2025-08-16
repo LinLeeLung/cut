@@ -122,12 +122,12 @@ async function onFileChange(e) {
   showMessage('⏳ 圖片上傳中…', 'info', 0)
 
   try {
-    const path = `uploads/${user.value.uid}/${Date.now()}_${file.name}`
+    const path = `uploadsRawPic/${user.value.uid}/${Date.now()}_${file.name}`
     const fileRef = storageRef(storage, path)
     await uploadBytes(fileRef, file)
     const url = await getDownloadURL(fileRef)
 
-    await addDoc(collection(db, 'uploads'), {
+    await addDoc(collection(db, 'uploadsRawPic'), {
       name: file.name,
       path,
       url,
@@ -167,7 +167,7 @@ async function deleteUpload(item) {
       console.warn('此紀錄沒有 path 欄位，略過刪 Storage。')
     }
 
-    await deleteDoc(doc(db, 'uploads', item.id))
+    await deleteDoc(doc(db, 'uploadsRawPic', item.id))
     showMessage('✅ 已刪除', 'success')
   } catch (err) {
     console.error('刪除失敗：', err)
@@ -185,7 +185,7 @@ function watchUploads() {
   }
 
   const q = query(
-    collection(db, 'uploads'),
+    collection(db, 'uploadsRawPic'),
     where('uploadedBy.uid', '==', user.value.uid),
     orderBy('createdAt', 'desc'), // 依建立時間新→舊
   )

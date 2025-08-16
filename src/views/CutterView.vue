@@ -143,7 +143,11 @@
         <!-- 選擇圖片 -->
         <div class="mb-2">
           <label class="text-sm mr-2">選擇圖片：</label>
-          <select v-model="boards[index].url" class="border rounded px-2 py-1 text-sm">
+          <select
+            v-model="boards[index].url"
+            @change="onImageChange(index)"
+            class="border rounded px-2 py-1 text-sm"
+          >
             <option value="">請選擇</option>
             <option v-for="img in uploadedImages" :key="img.id" :value="img.url">
               {{ img.name }}
@@ -211,6 +215,11 @@ import {
   getDownloadURL,
   deleteObject,
 } from 'firebase/storage'
+function onImageChange(index: number) {
+  const url = boards.value[index]?.url
+  const img = uploadedImages.value.find((i) => i.url === url)
+  boards.value[index].name = img?.name || '' // ← 直接存顯示文字
+}
 
 /* ====== 基本狀態 ====== */
 const cmToPx = ref(3.5)
@@ -298,7 +307,8 @@ watch(
       if (url !== oldUrls?.[index]) {
         const board = boards.value[index]
         board.hasParsedSize = false
-        const filename = url.split('/').pop() ?? ''
+        //  -       const filename = url.split('/').pop() ?? ''
+        const filename = (board.name || '').split('/').pop() || (url.split('/').pop() ?? '')
         const { length, width } = parseSizeFromFilename(filename)
         if (length && width) {
           board.length = length
@@ -315,10 +325,8 @@ watch(
 
 /* 預設檔名：第一塊板材圖片的檔名（去掉副檔名）；沒有就用「未命名」 */
 const defaultImageName = computed(() => {
-  const firstUrl = boards.value?.[0]?.url || ''
-  if (!firstUrl) return '未命名'
-  const base = firstUrl.split('/').pop() || ''
-  return base.split('?')[0].replace(/\.[^.]+$/, '') || '未命名'
+  const name = boards.value?.[0]?.name || ''
+  return name ? name.replace(/\.[^.]+$/, '') : '未命名'
 })
 
 /* ====== 快照功能 ====== */
@@ -375,17 +383,28 @@ const handleScreenshot = (data: Screenshot & { x?: number; y?: number; rotation?
 /* ====== 板材 ====== */
 const addBoard = () => {
   const newId = nanoid()
-  const newestUrl = uploadedImages.value.at(0)?.url ?? ''
+  // - const newestUrl = uploadedImages.value.at(0)?.url ?? ''
+  const newest = uploadedImages.value.at(0) // 你已排序為新→舊
   boards.value.push({
     id: newId,
     length: 320,
     width: 160,
-    url: newestUrl,
+    // -   url: newestUrl,
+    url: newest?.url ?? '',
+    name: newest?.name ?? '', // ✅ 立即帶入檔名
     visible: true,
     hasParsedSize: false,
   })
   allRects.value[newId] = []
 }
+watch(uploadedImages, (list) => {
+  boards.value.forEach((b) => {
+    if (!b.name && b.url) {
+      const m = list.find((i) => i.url === b.url)
+      if (m?.name) b.name = m.name
+    }
+  })
+})
 
 /* ====== 讀取使用者已上傳圖片（新→舊） ====== */
 const loadUploadedImages = (user: any) => {
@@ -466,7 +485,7 @@ const uploadFullStateToFirebase = async () => {
   const metaRef = doc(db, 'cuttingStates', user.uid, 'files', filename) // docId = filename
   await setDoc(metaRef, {
     uid: user.uid,
-    filename,
+    filename: filename,
     createdAt: serverTimestamp(),
     downloadUrl,
     public: false,
